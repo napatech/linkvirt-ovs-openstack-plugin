@@ -48,16 +48,15 @@ class LinkvirtOvsMechanismDriver(OpenvswitchMechanismDriver):
         vif_details = super(
             LinkvirtOvsMechanismDriver,
             self)._pre_get_vif_details(agent, context)
-        network_type = context._network_context.current.get(
-                'provider:network_type')
         if context.current[VNIC_TYPE] == VNIC_VIRTIO_FORWARDER:
             profile = context.current.get(portbindings.PROFILE)
             pci_slot = ''
+            vf_num = 0
             if profile:
                 pci_slot = profile.get('pci_slot', '')
-            dbs, sep, func = pci_slot.rpartition(':')
-            dbs, sep, func = func.partition('.')
-            vf_num = int(dbs) * 8 + int(func)
+                dbs, sep, func = pci_slot.rpartition(':')
+                dbs, sep, func = func.partition('.')
+                vf_num = int(dbs) * 8 + int(func)
 
             socket_path = "/usr/local/var/run/stdvio" + str(vf_num)
             vif_details[portbindings.VHOST_USER_SOCKET] = socket_path
@@ -65,7 +64,6 @@ class LinkvirtOvsMechanismDriver(OpenvswitchMechanismDriver):
             vif_details[portbindings.VHOST_USER_OVS_PLUG] = True
             vif_details[portbindings.CAP_PORT_FILTER] = False
             vif_details[portbindings.OVS_HYBRID_PLUG] = False
-            vif_details["network_type"] = network_type
         return vif_details
 
     def bind_port(self, context):

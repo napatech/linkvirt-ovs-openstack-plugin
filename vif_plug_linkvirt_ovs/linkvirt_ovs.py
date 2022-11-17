@@ -23,13 +23,13 @@ from os_vif import objects as obj
 from vif_plug_ovs import exception
 from vif_plug_ovs import linux_net
 from oslo_log import log as logging
-from vif_plug_linkvirt_ovs import lv_ovs
+from vif_plug_ovs import ovs
 from vif_plug_ovs import constants
 
 LOG = logging.getLogger(__name__)
 
 
-class LinkvirtOvsPlugin(lv_ovs.LV_OvsPlugin):
+class LinkvirtOvsPlugin(ovs.OvsPlugin):
     """An OS-VIF plugin that extends the OVS plugin with vswitch support.
 
     """
@@ -59,17 +59,19 @@ class LinkvirtOvsPlugin(lv_ovs.LV_OvsPlugin):
         super(LinkvirtOvsPlugin, self).__init__(config)
 
     def _plug_representor(self, vif, instance_info):
-        datapath = self._get_vif_datapath_type(vif,
-                                               constants.OVS_DATAPATH_NETDEV)
+        datapath = self._get_vif_datapath_type(vif, constants.OVS_DATAPATH_NETDEV)
         self.ovsdb.ensure_ovs_bridge(vif.network.bridge, datapath)
         pci_slot = vif.port_profile.representor_address
+        dbs, sep, func = pci_slot.rpartition(':')
+        dbs, sep, func = func.partition('.')
+        vf_num = int(dbs) * 8 + int(func)
         args = []
         kwargs = {}
         representor = linux_net.get_dpdk_representor_port_name(vif.id)
         args = [vif, representor, instance_info]
         kwargs = {'interface_type': constants.OVS_DPDK_INTERFACE_TYPE,
                   'pf_pci': pci_slot,
-                  'network_type': vif.network.network_type}
+                  'vf_num': vf_num}
 
         self._create_vif_port(*args, **kwargs)
 
